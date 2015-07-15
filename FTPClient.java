@@ -5,7 +5,7 @@ package ftp.cs410agile;
  *
  * @version 0.1
  */
-public class FTP-Client {
+public class FTPClient{
 
   public static void main(String[] args) {
     System.exit(0);
