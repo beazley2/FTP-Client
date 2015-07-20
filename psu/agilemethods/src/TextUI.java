@@ -5,7 +5,7 @@ package psu.agilemethods.src;
 public class TextUI {
 
   private static final String WELCOME = "Welcome to Team Niner's FTP Client";
-  private static final String CMD_LINE_ERROR = "Missing arguments from the command line. Order is <host> <username> <password>\n";
+  private static final String CMD_LINE_ERROR = "Missing arguments from the command line. Order is <username> <password>\n";
 
 
   public TextUI () {}
