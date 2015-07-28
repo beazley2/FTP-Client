@@ -13,7 +13,9 @@ public class TextUI {
      * Initialize console interactions with the user
      */
     public static void start() {
+
         display(WELCOME);
+
     }
 
     /**
@@ -22,6 +24,7 @@ public class TextUI {
      * @param msg The String to be output to console.
      */
     private static void display(String msg) {
-        System.console().writer().print(msg);
+        System.out.println(msg);
+        //System.console().writer().print(msg);
     }
 }
