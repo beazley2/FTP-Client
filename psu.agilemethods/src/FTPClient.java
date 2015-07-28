@@ -1,4 +1,4 @@
-package ftp.cs410agile;
+package psu.agilemethods.src;
 
 /**
  * Implements a simple FTP client
@@ -8,6 +8,8 @@ package ftp.cs410agile;
 public class FTPClient{
 
   public static void main(String[] args) {
+      TextUI.start();
+
     System.exit(0);
   }
 
