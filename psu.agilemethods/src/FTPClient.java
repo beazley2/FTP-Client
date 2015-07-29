@@ -77,13 +77,14 @@ public class FTPClient{
     /**
      * Prints usage information for this program and exits
      * @param message An error message to print
-     */
+     */ 
+     //TODO: update usage info
     private static void usage( String message )
     {
         PrintStream err = System.err;
         err.println("** " + message);
         err.println();
-        err.println("usage: java Project4 username password");
+        err.println("usage: java ftp-client username password");
         err.println("  username     User name on remote server");
         err.println("  password     Password on remote server");
         err.println();
