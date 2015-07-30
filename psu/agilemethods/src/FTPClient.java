@@ -21,21 +21,14 @@ public class FTPClient{
   public static final String FILE_TO_UL = "upload.txt";
 
   public static void main(String[] args) {
-    String userName = null;
-    String password = null;
+    String userName = "null";
+    String password = "null";
 
-    start();
+    TextUI.start();
 
 
     try {
       JSch jsch = new JSch();
-      if (args.length != 2) {
-        cmd_error();
-        System.exit(1);
-      } else {
-        userName = args[0];
-        password = args[1];
-      }
 
       JSch.setConfig("StrictHostKeyChecking", "no");
       Session session = jsch.getSession(userName, HOST, PORT);
@@ -48,82 +41,9 @@ public class FTPClient{
 
       ChannelSftp sftpChannel = (ChannelSftp) channel;
 
-      System.out.println("Showing current directory: ");
-      System.out.println("Current directory: " + sftpChannel.pwd());
-      pause();
 
-      System.out.println("Showing contents on current directory");
-      lsRemote(sftpChannel);
-      pause();
-
-      System.out.println("Making new remote directory: ftp-test ");
-      try {
-        sftpChannel.mkdir("ftp-test");
-      } catch (SftpException e) {
-        System.out.println("Directory already exists.");
-      }
-      pause();
-
-      System.out.println("Changing to newly created directory: ");
-      sftpChannel.cd("ftp-test");
-      System.out.println("Current directory: " + sftpChannel.pwd());
-      pause();
-
-      System.out.println("Showing current local directory: ");
-      System.out.println("Local directory: " + sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Making new local directory: ftp-test");
-      String newLocalDirPath = "ftp-test";
-      if (new File(newLocalDirPath).mkdir()) {
-        System.out.println("Directory created.");
-      } else {
-        System.out.println("Directory already exists.");
-      }
-      pause();
-
-      System.out.println("Changing to newly created local directory: ");
-      sftpChannel.lcd("ftp-test");
-      System.out.println("Local directory: " + sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Showing contents of local directory: ");
-      lsLocal(sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Attempting to download download.txt from server");
-      try {
-        sftpChannel.get(FILE_TO_DL, FILE_TO_DL);
-      } catch (SftpException e) {
-        System.err.println(e.getMessage());
-        System.exit(1);
-      }
-      System.out.println("Download Successful.");
-      lsLocal(sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Attempting to upload upload.txt to server");
-      try {
-        sftpChannel.put(FILE_TO_UL, FILE_TO_UL);
-      } catch (SftpException e) {
-        System.err.println(e.getMessage());
-        System.exit(1);
-      }
-      System.out.println("Upload successful");
-      lsRemote(sftpChannel);
-      pause();
-
-      System.out.println("Renaming upload.txt to uploaded.txt");
-      sftpChannel.rename("upload.txt", "uploaded.txt");
-      lsRemote(sftpChannel);
-      pause();
-
-      System.out.println("Deleting uploaded.txt from remote");
-      sftpChannel.rm("uploaded.txt");
-      lsRemote(sftpChannel);
-      pause();
-
-
+      upload(sftpChannel, FILE_TO_UL);
+      delete(sftpChannel, FILE_TO_UL);
 
       channel.disconnect();
 
@@ -159,6 +79,32 @@ public class FTPClient{
         System.out.println("File:\t\t" + f.getName());
       }
     }
+  }
+
+  // used to upload a file to the server
+  static void upload(ChannelSftp sftpChannel, String file) throws SftpException {
+
+    System.out.println("Attempting to upload" + file + " to server");
+    try {
+      sftpChannel.put(file, file);
+    } catch (SftpException e) {
+      System.err.println(e.getMessage());
+    }
+    System.out.println("Upload successful");
+    lsRemote(sftpChannel);
+    pause();
+  }
+
+  // used to delete a file from the server
+  static void delete(ChannelSftp sftpChannel, String file) throws SftpException {
+    System.out.println("Deleting " + file + " from remote");
+    try {
+      sftpChannel.rm(file);
+    } catch (SftpException e) {
+      System.err.println(e.getMessage());
+    }
+    lsRemote(sftpChannel);
+    pause();
   }
 
   static void pause() {
