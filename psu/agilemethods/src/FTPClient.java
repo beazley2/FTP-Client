@@ -161,6 +161,27 @@ public class FTPClient{
     }
   }
 
+  // "public" for accessibility from "FTPClientGetTest.java"
+  // (absent a more modular structure for the project)
+  public static void get (ChannelSftp sftpChannel, String sourceFilePath,
+                   String destDirectoryPath) throws SftpException {
+    System.out.println("Attempting to download \"" + sourceFilePath + "\" from server");
+
+    try {
+      sftpChannel.get(sourceFilePath, destDirectoryPath);
+    }
+    catch (SftpException e) {
+      System.err.println(e.getMessage());
+      throw e;
+    }
+
+    System.out.println("Download successful");
+
+    lsLocal(".");
+    pause();
+
+  }
+
   static void pause() {
     try {
       Thread.sleep(2000);
