@@ -57,11 +57,7 @@ public class FTPClient{
       pause();
 
       System.out.println("Making new remote directory: ftp-test ");
-      try {
-        sftpChannel.mkdir("ftp-test");
-      } catch (SftpException e) {
-        System.out.println("Directory already exists.");
-      }
+      mkdir(sftpChannel, "ftp-test");
       pause();
 
       System.out.println("Changing to newly created directory: ");
@@ -119,7 +115,7 @@ public class FTPClient{
       pause();
 
       System.out.println("Deleting uploaded.txt from remote");
-      sftpChannel.rm("uploaded.txt");
+      rmRemote(sftpChannel, "uploaded.txt");
       lsRemote(sftpChannel);
       pause();
 
@@ -158,6 +154,24 @@ public class FTPClient{
       if (f.isFile()) {
         System.out.println("File:\t\t" + f.getName());
       }
+    }
+  }
+
+  static void mkdir(ChannelSftp sftpChannel, String path) {
+    try {
+      sftpChannel.mkdir(path);
+      System.out.println("Directory " + path + "created.");
+    } catch (SftpException e) {
+      System.out.println("Directory already exists.");
+    }
+  }
+
+  static void rmRemote(ChannelSftp sftpChannel, String path) {
+    try {
+      System.out.println("Deleting " + path);
+      sftpChannel.rm(path);
+    } catch (SftpException e) {
+      System.out.println("File not found. No files deleted.");
     }
   }
 
