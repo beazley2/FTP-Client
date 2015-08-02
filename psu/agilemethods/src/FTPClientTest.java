@@ -3,7 +3,6 @@ package psu.agilemethods.src;
 import com.jcraft.jsch.*;
 import org.junit.*;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -16,7 +15,6 @@ import static junit.framework.Assert.fail;
  */
 public class FTPClientTest {
   static ChannelSftp c;
-  static ArrayList<String> localFileNames;
   static ArrayList<String> fileNames;
   static Vector<ChannelSftp.LsEntry> fileList;
   static final String PATH = "ftp-testing";
@@ -42,7 +40,7 @@ public class FTPClientTest {
 
     String user = "beazley2";
     String host = "ada.cs.pdx.edu";
-    String password = "Dnlbsb0501pdx";
+    String password = "";
 
     int port = 22;
 
