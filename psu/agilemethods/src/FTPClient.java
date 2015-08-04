@@ -1,10 +1,10 @@
 package psu.agilemethods.src;
 
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
 
+import java.io.File;
 import java.io.PrintStream;
+import java.util.Vector;
 
 /**
  * Implements a simple FTP client
@@ -95,7 +95,53 @@ public class FTPClient{
         System.exit(1);
     }
 
+    static void lsLocal(String path) {
+        File dir = new File(path);
+        File[] fileList = dir.listFiles();
+        for (File f : fileList) {
+            if (f.isDirectory()) {
+                System.out.println("Directory:\t" + f.getName());
+            }
+            if (f.isFile()) {
+                System.out.println("File:\t\t" + f.getName());
+            }
+        }
+    }
+
+    static void lsRemote(ChannelSftp ch) {
+        try {
+            Vector<ChannelSftp.LsEntry> currentDir = ch.ls(ch.pwd());
+            for (ChannelSftp.LsEntry entry : currentDir) {
+                System.out.println(entry.getLongname());
+            }
+        } catch (SftpException e) {
+            System.err.println(e.getMessage());
+        }
+    }
+
+    // "public" for accessibility from "FTPClientGetTest.java"
+    // (absent a more modular structure for the project)
+    public static void get (ChannelSftp sftpChannel, String sourceFilePath,
+                            String destDirectoryPath) throws SftpException {
+        System.out.println("Attempting to download \"" + sourceFilePath + "\" from server");
+
+        try {
+            sftpChannel.get(sourceFilePath, destDirectoryPath);
+        }
+        catch (SftpException e) {
+            System.err.println(e.getMessage());
+            throw e;
+        }
+
+        System.out.println("Download successful");
+
+        lsLocal(".");
+        pause();
+
+    }
 }
+
+
 
 
 
