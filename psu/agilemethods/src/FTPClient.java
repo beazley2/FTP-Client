@@ -3,8 +3,14 @@ package psu.agilemethods.src;
 
 import com.jcraft.jsch.*;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
+import java.util.Arrays;
 
 import static psu.agilemethods.src.TextUI.*;
 
@@ -19,10 +25,13 @@ public class FTPClient{
   public static final int PORT = 22;
   public static final String FILE_TO_DL = "download.txt";
   public static final String FILE_TO_UL = "upload.txt";
+  public static BufferedReader br;
 
   public static void main(String[] args) {
+    br = new BufferedReader(new InputStreamReader(System.in));
     String userName = null;
     String password = null;
+    Boolean quit = false;
 
     start();
 
@@ -30,7 +39,7 @@ public class FTPClient{
     try {
       JSch jsch = new JSch();
       if (args.length != 2) {
-        cmd_error();
+        cmdError();
         System.exit(1);
       } else {
         userName = args[0];
@@ -48,82 +57,16 @@ public class FTPClient{
 
       ChannelSftp sftpChannel = (ChannelSftp) channel;
 
-      System.out.println("Showing current directory: ");
-      System.out.println("Current directory: " + sftpChannel.pwd());
-      pause();
+      System.out.println("Connected to " + HOST);
 
-      System.out.println("Showing contents on current directory");
-      lsRemote(sftpChannel);
-      pause();
-
-      System.out.println("Making new remote directory: ftp-test ");
-      mkdir(sftpChannel, "ftp-test");
-      pause();
-
-      System.out.println("Changing to newly created directory: ");
-      sftpChannel.cd("ftp-test");
-      System.out.println("Current directory: " + sftpChannel.pwd());
-      pause();
-
-      System.out.println("Showing current local directory: ");
-      System.out.println("Local directory: " + sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Making new local directory: ftp-test");
-      String newLocalDirPath = "ftp-test";
-      if (new File(newLocalDirPath).mkdir()) {
-        System.out.println("Directory created.");
-      } else {
-        System.out.println("Directory already exists.");
+      while (!quit) {
+        ArrayList<String> commands = getCommand(sftpChannel);
+        quit = execCommand(sftpChannel, commands);
       }
-      pause();
-
-      System.out.println("Changing to newly created local directory: ");
-      sftpChannel.lcd("ftp-test");
-      System.out.println("Local directory: " + sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Showing contents of local directory: ");
-      lsLocal(sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Attempting to download download.txt from server");
-      try {
-        sftpChannel.get(FILE_TO_DL, FILE_TO_DL);
-      } catch (SftpException e) {
-        System.err.println(e.getMessage());
-        System.exit(1);
-      }
-      System.out.println("Download Successful.");
-      lsLocal(sftpChannel.lpwd());
-      pause();
-
-      System.out.println("Attempting to upload upload.txt to server");
-      try {
-        sftpChannel.put(FILE_TO_UL, FILE_TO_UL);
-      } catch (SftpException e) {
-        System.err.println(e.getMessage());
-        System.exit(1);
-      }
-      System.out.println("Upload successful");
-      lsRemote(sftpChannel);
-      pause();
-
-      System.out.println("Renaming upload.txt to uploaded.txt");
-      sftpChannel.rename("upload.txt", "uploaded.txt");
-      lsRemote(sftpChannel);
-      pause();
-
-      System.out.println("Deleting uploaded.txt from remote");
-      rmRemote(sftpChannel, "uploaded.txt");
-      lsRemote(sftpChannel);
-      pause();
-
-
 
       channel.disconnect();
 
-    } catch (JSchException | SftpException e) {
+    } catch (JSchException e) {
       System.err.println(e.getMessage());
     }
 
@@ -131,6 +74,59 @@ public class FTPClient{
 
 
     System.exit(0);
+  }
+
+  private static Boolean execCommand(ChannelSftp sftpChannel, ArrayList<String> commands) {
+    boolean quit = false;
+    int size = commands.size();
+    if (!commands.isEmpty()) {
+      String cmd = commands.get(0).toLowerCase();
+      switch (cmd) {
+        case "mkdir":
+          if (size < 2) {
+            missingCommandArguments(cmd, "mkdir <path> - path can be complete or relative to current directory.");
+          } else {
+            mkdir(sftpChannel, commands.get(1));
+          }
+          break;
+        case "ls":
+          lsRemote(sftpChannel);
+          break;
+        case "dir":
+          lsLocal(sftpChannel.lpwd());
+          break;
+        case "rm":
+          if (size < 2) {
+            missingCommandArguments(cmd, "rm <filepath> - file path can be complete or relative to current directory.");
+          } else {
+            rmRemote(sftpChannel, commands.get(1));
+          }
+          break;
+        case "quit":
+          quit = true;
+          break;
+        default:
+          unknownCommand(cmd);
+        }
+      }
+    return quit;
+  }
+
+  private static ArrayList<String> getCommand(ChannelSftp sftpChannel) {
+    String delimiters = "[ ]+";
+    String cmds = "";
+    try {
+      System.out.print(sftpChannel.pwd() + ">");
+    } catch (SftpException e) {
+      System.err.println(e.getMessage());
+    }
+    try {
+      cmds = br.readLine();
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+    }
+    String[] split = cmds.split(delimiters);
+    return new ArrayList<>(Arrays.asList(split));
   }
 
   static void lsRemote(ChannelSftp ch) {
@@ -147,12 +143,14 @@ public class FTPClient{
   static void lsLocal(String path) {
     File dir = new File(path);
     File[] fileList = dir.listFiles();
-    for (File f : fileList) {
-      if (f.isDirectory()) {
-        System.out.println("Directory:\t" + f.getName());
-      }
-      if (f.isFile()) {
-        System.out.println("File:\t\t" + f.getName());
+    if (fileList != null) {
+      for (File f : fileList) {
+        if (f.isDirectory()) {
+          System.out.println("Directory:\t" + f.getName());
+        }
+        if (f.isFile()) {
+          System.out.println("File:\t\t" + f.getName());
+        }
       }
     }
   }
@@ -160,19 +158,60 @@ public class FTPClient{
   static void mkdir(ChannelSftp sftpChannel, String path) {
     try {
       sftpChannel.mkdir(path);
-      System.out.println("Directory " + path + "created.");
+      System.out.println("Directory " + path + " created.");
     } catch (SftpException e) {
       System.out.println("Directory already exists.");
     }
   }
 
   static void rmRemote(ChannelSftp sftpChannel, String path) {
+    Vector<ChannelSftp.LsEntry> files;
+    String fileName;
+    String dirPath = "";
+    String[] paths = path.split("/");
+    boolean exists = false;
+
+
     try {
-      System.out.println("Deleting " + path);
-      sftpChannel.rm(path);
+      if (paths.length == 1) {
+        files = sftpChannel.ls(sftpChannel.pwd());
+        fileName = path;
+      } else {
+        for (int i = 0; i < paths.length - 1; i++) {
+          dirPath += paths[i] + "/";
+        }
+        files = sftpChannel.ls(dirPath);
+        fileName = paths[paths.length-1];
+      }
+
+      for (ChannelSftp.LsEntry file : files) {
+        if (file.getFilename().equals(fileName)){
+          exists = true;
+          break;
+        }
+      }
+
+      if (exists) {
+        System.out.println("Deleting " + path);
+        System.out.println("Are you sure? (y/n)");
+        String confirm = br.readLine();
+        String[] confirmSplit = confirm.split("[ ]+");
+        confirm = confirmSplit[0].toLowerCase();
+        if (confirm.equals("y") || confirm.equals("yes")) {
+          sftpChannel.rm(path);
+          System.out.println(fileName + " deleted.");
+        } else {
+          System.out.println("Deletion cancelled.");
+        }
+      } else {
+        System.out.println("File not found.");
+      }
     } catch (SftpException e) {
       System.out.println("File not found. No files deleted.");
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
     }
+
   }
 
   static void pause() {

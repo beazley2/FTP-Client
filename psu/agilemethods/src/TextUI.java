@@ -17,9 +17,18 @@ public class TextUI {
       display(WELCOME);
   }
 
-  public static void cmd_error() {
+  public static void cmdError() {
     display(CMD_LINE_ERROR);
   }
+
+  public static void unknownCommand(String str) {
+    display(str + " command not recognized.");
+  }
+
+  public static void missingCommandArguments(String cmd, String usage) {
+    display(cmd + " is missing arguments.\n" + usage);
+  }
+
   /**
    * Shortcut method for printing a message to console.
    * Messages are printed as-is with no line breaks added.
