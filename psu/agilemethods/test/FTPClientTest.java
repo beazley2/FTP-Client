@@ -1,11 +1,11 @@
-package psu.agilemethods.src;
-
+package psu.agilemethods.test;
 
 import com.jcraft.jsch.*;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import psu.agilemethods.src.FTPClient;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -19,7 +19,7 @@ import java.util.Vector;
  */
 
 
-public class FTPClientGetTest {
+public class FTPClientTest {
     static ChannelSftp c;
     public static final String UL_FILE = "ul.txt";
     public static final String DL_FILE = "dl.txt";
@@ -43,17 +43,16 @@ public class FTPClientGetTest {
         JSch jsch=new JSch();
         JSch.setConfig("StrictHostKeyChecking", "no");
 
-        String user= "eschott";
+
+        FTPTestSetup setup = new FTPTestSetup();
+        String password = setup.getPassword();
+        String user= setup.getUsername();
         String host="ada.cs.pdx.edu";
         int port=22;
 
         try {
             Session session=jsch.getSession(user, host, port);
-        //requires setting user specific info for login
-            UserInfo ui = new SampleSftp();
-            session.setUserInfo(ui);
-
-            session.setPassword("viP#R450490");
+            session.setPassword(password);
             session.connect();
 
             Channel channel=session.openChannel("sftp");
@@ -93,6 +92,14 @@ public class FTPClientGetTest {
         refreshFileList();
     }
 
+    //Error: files still being used by another process
+    /*@AfterClass
+    public static void tearDown() throws Exception {
+        Path path1 = Paths.get("ul.txt");
+        Files.deleteIfExists(path1);
+        Files.deleteIfExists(Paths.get("dl.txt"));
+    }*/
+
     @Test
     public void targetFilePresent() {
         Assert.assertTrue("dl.txt absent on host",
@@ -122,4 +129,6 @@ public class FTPClientGetTest {
             Assert.assertEquals("2: No such file", e.toString());
         }
     }
+
+
 }

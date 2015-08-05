@@ -136,7 +136,7 @@ public class FTPClient{
         }
     }
 
-    // "public" for accessibility from "FTPClientGetTest.java"
+    // "public" for accessibility from "FTPClientTest.java"
     // (absent a more modular structure for the project)
     public static void get (ChannelSftp sftpChannel, String sourceFilePath,
                             String destDirectoryPath) throws SftpException {
