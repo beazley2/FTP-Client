@@ -74,7 +74,9 @@ public class FTPClient{
           parseCmd(cmd, c);
       }
 
-      session.disconnect();
+      if (session != null) {
+          session.disconnect();
+      }
       System.exit(0);
   }
 
