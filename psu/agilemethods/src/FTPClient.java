@@ -5,7 +5,7 @@ import com.jcraft.jsch.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * Implements a simple FTP client
@@ -15,8 +15,7 @@ import java.util.Vector;
 public class FTPClient{
     public static final String HOST = "ada.cs.pdx.edu";
     public static final int PORT = 22;
-    public static final String FILE_TO_DL = "download.txt";
-    public static final String FILE_TO_UL = "upload.txt";
+    static ChannelSftp c;
 
   public static void main(String[] args) {
       String userName = null;
@@ -30,17 +29,6 @@ public class FTPClient{
           e.printStackTrace();
       }
 
-      /*//parse command line args
-      for (String arg : args) {
-          if (userName == null) {
-              userName = arg;
-          } else if (password == null) {
-              password = arg;
-          } else {
-              usage("Erroneous command line argument: " + arg);
-          }
-      }*/
-
       //check for missing username
       if (userName == null) {
           usage("Missing command line arguments");
@@ -48,6 +36,7 @@ public class FTPClient{
           usage("Missing password");
       }
 
+      //establish connection
       JSch jsch = new JSch();
       JSch.setConfig("StrictHostKeyChecking", "no");
       Session session = null;
@@ -56,18 +45,24 @@ public class FTPClient{
       } catch (JSchException e) {
           e.printStackTrace();
       }
-
       if (session != null) {
           session.setPassword(password);
           try {
               session.connect();
+              Channel channel=session.openChannel("sftp");
+              channel.connect();
+              c=(ChannelSftp)channel;
               System.out.println("Connected");
           } catch (JSchException e) {
-              e.printStackTrace();
+              System.err.println("Failed to create session");
+              System.exit(1);
           }
       } else {
           error("Failed to create session");
       }
+
+
+      //enter console mode
 
       String cmd = "";
       while(!cmd.equals("exit")) {
@@ -76,12 +71,41 @@ public class FTPClient{
           } catch (IOException e) {
               e.printStackTrace();
           }
-          System.out.println(cmd);
+          parseCmd(cmd, c);
       }
 
       session.disconnect();
       System.exit(0);
   }
+
+    public static void parseCmd(String cmdIn, ChannelSftp c ) {
+        String[] cmd = cmdIn.split(" ");
+        ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
+        Iterator itr = cmdArgs.iterator();
+        while (itr.hasNext()) {
+            String arg = (String)itr.next();
+            switch (arg) {
+                case "get":
+                    try {
+                        String srcPath = (String) itr.next();
+                        String destPath = (String) itr.next();
+                        try {
+                            get(c, srcPath, destPath);
+                        } catch (SftpException e) {
+                            e.printStackTrace();
+                        }
+                    } catch (NoSuchElementException e) {
+                        usage("Source and destination path must be specified");
+                    }
+                    break;
+                case "exit":
+                    break;
+                default:
+                    usage("That option is not recognized. Please view README");
+                    break;
+            }
+        }
+    }
 
     private static void error( String message )
     {
@@ -100,16 +124,16 @@ public class FTPClient{
         PrintStream err = System.err;
         err.println("** " + message);
         err.println();
-        err.println("usage: java Project4 username password");
-        err.println("  username     User name on remote server");
-        err.println("  password     Password on remote server");
+        err.println("usage:");
+        err.println("get [source] [destination]     : gets file from server");
+        err.println("exit                           : exits from ftp console");
         err.println();
         err.println("This simple program connects to an FTP server");
         err.println("Default server: " + HOST);
         err.println("Default port: " + PORT);
         err.println();
 
-        System.exit(1);
+        //System.exit(1);
     }
 
     static void lsLocal(String path) {
@@ -146,14 +170,13 @@ public class FTPClient{
             sftpChannel.get(sourceFilePath, destDirectoryPath);
         }
         catch (SftpException e) {
-            System.err.println(e.getMessage());
+            //System.err.println(e.getMessage());
             throw e;
         }
 
         System.out.println("Download successful");
 
         lsLocal(".");
-        //pause();
 
     }
 }

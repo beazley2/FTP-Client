@@ -2,17 +2,18 @@ package psu.agilemethods.test;
 
 import com.jcraft.jsch.*;
 import junit.framework.Assert;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import psu.agilemethods.src.FTPClient;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Vector;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Created by gaber on 7/31/15.
@@ -28,6 +29,8 @@ public class FTPClientTest {
     static File [] fileList;
     static ArrayList<String> localFileNames;
     static ArrayList<String> hostFileNames;
+    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
 
     static public void refreshFileList() {
         fileList = dir.listFiles();
@@ -70,7 +73,15 @@ public class FTPClientTest {
                 hostFileNames.add(entry.getFilename());
             }
         } catch (SftpException e) {}
+    }
 
+    @Before
+    public void refresh() {
+        refreshFileList();
+    }
+
+    @Before
+    public void setUpFiles() {
         //ensure there is a file on the server to get
         try {
             Writer writer = new FileWriter(UL_FILE);
@@ -84,41 +95,24 @@ public class FTPClientTest {
         } catch (SftpException e) {
             e.printStackTrace();
         }
-
     }
 
     @Before
-    public void refresh() {
-        refreshFileList();
+    public void setUpStreams() {
+        System.setOut(new PrintStream(outContent));
+        System.setErr(new PrintStream(errContent));
     }
 
-    //Error: files still being used by another process
-    /*@AfterClass
-    public static void tearDown() throws Exception {
-        Path path1 = Paths.get("ul.txt");
-        Files.deleteIfExists(path1);
-        Files.deleteIfExists(Paths.get("dl.txt"));
-    }*/
+    @After
+    public void cleanUpStreams() {
+        System.setOut(null);
+        System.setErr(null);
+    }
 
     @Test
     public void targetFilePresent() {
         Assert.assertTrue("dl.txt absent on host",
                 hostFileNames.contains(DL_FILE));
-    }
-
-    @Test
-    public void fileNotLocalAndConfirmTransfer() {
-        Assert.assertFalse("dl.txt present locally",
-                localFileNames.contains(DL_FILE));
-
-        try {
-            client.get(c, DL_FILE, ".");
-        } catch (SftpException e) {}
-
-        refreshFileList();
-
-        Assert.assertTrue("xfer.txt absent (not transferred)",
-                localFileNames.contains(DL_FILE));
     }
 
     @Test
@@ -128,6 +122,19 @@ public class FTPClientTest {
         } catch (SftpException e){
             Assert.assertEquals("2: No such file", e.toString());
         }
+    }
+
+    @Test
+    public void testParseCmdGetFailsWithNoParams() {
+        client.parseCmd("get", c);
+        assertThat(errContent.toString(), containsString("Source and destination path must be specified"));
+    }
+
+    @Test
+    public void testParseCmdGetPassesWithParams() {
+        String cmdString = "get " + DL_FILE + " .";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Download successful"));
     }
 
 
