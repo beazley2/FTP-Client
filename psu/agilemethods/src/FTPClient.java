@@ -30,17 +30,6 @@ public class FTPClient{
           e.printStackTrace();
       }
 
-      /*//parse command line args
-      for (String arg : args) {
-          if (userName == null) {
-              userName = arg;
-          } else if (password == null) {
-              password = arg;
-          } else {
-              usage("Erroneous command line argument: " + arg);
-          }
-      }*/
-
       //check for missing username
       if (userName == null) {
           usage("Missing command line arguments");
