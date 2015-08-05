@@ -8,6 +8,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -18,6 +21,8 @@ import java.util.Vector;
 
 public class FTPClientGetTest {
     static ChannelSftp c;
+    public static final String UL_FILE = "ul.txt";
+    public static final String DL_FILE = "dl.txt";
     FTPClient client = new FTPClient();
     static File dir = new File(".");
     static File [] fileList;
@@ -66,6 +71,21 @@ public class FTPClientGetTest {
                 hostFileNames.add(entry.getFilename());
             }
         } catch (SftpException e) {}
+
+        //ensure there is a file on the server to get
+        try {
+            Writer writer = new FileWriter(UL_FILE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            c.put(UL_FILE);
+            c.rename(UL_FILE, DL_FILE);
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Before
@@ -75,23 +95,23 @@ public class FTPClientGetTest {
 
     @Test
     public void targetFilePresent() {
-        Assert.assertTrue("xfer.txt absent on host",
-                hostFileNames.contains("xfer.txt"));
+        Assert.assertTrue("dl.txt absent on host",
+                hostFileNames.contains(DL_FILE));
     }
 
     @Test
     public void fileNotLocalAndConfirmTransfer() {
-        Assert.assertFalse("xfer.txt present locally",
-                localFileNames.contains("xfer.txt"));
+        Assert.assertFalse("dl.txt present locally",
+                localFileNames.contains(DL_FILE));
 
         try {
-            client.get(c, "xfer.txt", ".");
+            client.get(c, DL_FILE, ".");
         } catch (SftpException e) {}
 
         refreshFileList();
 
         Assert.assertTrue("xfer.txt absent (not transferred)",
-                localFileNames.contains("xfer.txt"));
+                localFileNames.contains(DL_FILE));
     }
 
     @Test
