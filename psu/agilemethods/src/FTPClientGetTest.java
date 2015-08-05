@@ -1,11 +1,11 @@
-package ftp.cs410agile;
+package psu.agilemethods.src;
 
 
 import com.jcraft.jsch.*;
-import ftp.cs410agile.FTPClient;
-import ftp.get.SampleSftp;
 import junit.framework.Assert;
-import org.junit.*;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -36,22 +36,25 @@ public class FTPClientGetTest {
     @BeforeClass
     static public void initChannelandHostLs() {
         JSch jsch=new JSch();
+        JSch.setConfig("StrictHostKeyChecking", "no");
 
-        String user= "krosati";
-        String host="cs.pdx.edu";
+        String user= "eschott";
+        String host="ada.cs.pdx.edu";
         int port=22;
 
         try {
             Session session=jsch.getSession(user, host, port);
-            UserInfo ui = new SampleSftp.MyUserInfo();
-
+        //requires setting user specific info for login
+            UserInfo ui = new SampleSftp();
             session.setUserInfo(ui);
 
+            session.setPassword("viP#R450490");
             session.connect();
 
             Channel channel=session.openChannel("sftp");
             channel.connect();
             c=(ChannelSftp)channel;
+            assert(channel.isConnected());
         }
         catch (JSchException e) {
             e.printStackTrace();

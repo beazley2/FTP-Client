@@ -3,6 +3,7 @@ package psu.agilemethods.src;
 import com.jcraft.jsch.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Vector;
 
@@ -22,8 +23,14 @@ public class FTPClient{
       String password = null;
 
       TextUI.start();
+      try {
+          userName = TextUI.getUsername();
+          password = TextUI.getPassword();
+      } catch (IOException e) {
+          e.printStackTrace();
+      }
 
-      //parse command line args
+      /*//parse command line args
       for (String arg : args) {
           if (userName == null) {
               userName = arg;
@@ -32,7 +39,7 @@ public class FTPClient{
           } else {
               usage("Erroneous command line argument: " + arg);
           }
-      }
+      }*/
 
       //check for missing username
       if (userName == null) {
@@ -59,10 +66,20 @@ public class FTPClient{
               e.printStackTrace();
           }
       } else {
-          error ("Failed to create session");
+          error("Failed to create session");
       }
 
+      String cmd = "";
+      while(!cmd.equals("exit")) {
+          try {
+              cmd = TextUI.getCommand();
+          } catch (IOException e) {
+              e.printStackTrace();
+          }
+          System.out.println(cmd);
+      }
 
+      session.disconnect();
       System.exit(0);
   }
 
@@ -136,7 +153,7 @@ public class FTPClient{
         System.out.println("Download successful");
 
         lsLocal(".");
-        pause();
+        //pause();
 
     }
 }
