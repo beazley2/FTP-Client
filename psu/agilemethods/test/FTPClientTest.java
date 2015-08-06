@@ -22,11 +22,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class FTPClientTest {
     static ChannelSftp c;
-    public static final String UL_FILE = "ul.txt";
+    public static final String UL_FILE = "upload.txt";
     public static final String DL_FILE = "dl.txt";
     FTPClient client = new FTPClient();
     static File dir = new File(".");
-    static File [] fileList;
+    static File[] fileList;
     static ArrayList<String> localFileNames;
     static ArrayList<String> hostFileNames;
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -35,35 +35,33 @@ public class FTPClientTest {
     static public void refreshFileList() {
         fileList = dir.listFiles();
         localFileNames = new ArrayList();
-        for (File f : fileList)
-        {
+        for (File f : fileList) {
             localFileNames.add(f.getName());
         }
     }
 
     @BeforeClass
     static public void initChannelandHostLs() {
-        JSch jsch=new JSch();
+        JSch jsch = new JSch();
         JSch.setConfig("StrictHostKeyChecking", "no");
 
 
         FTPTestSetup setup = new FTPTestSetup();
         String password = setup.getPassword();
-        String user= setup.getUsername();
-        String host="ada.cs.pdx.edu";
-        int port=22;
+        String user = setup.getUsername();
+        String host = "ada.cs.pdx.edu";
+        int port = 22;
 
         try {
-            Session session=jsch.getSession(user, host, port);
+            Session session = jsch.getSession(user, host, port);
             session.setPassword(password);
             session.connect();
 
-            Channel channel=session.openChannel("sftp");
+            Channel channel = session.openChannel("sftp");
             channel.connect();
-            c=(ChannelSftp)channel;
-            assert(channel.isConnected());
-        }
-        catch (JSchException e) {
+            c = (ChannelSftp) channel;
+            assert (channel.isConnected());
+        } catch (JSchException e) {
             e.printStackTrace();
         }
         try {
@@ -72,7 +70,8 @@ public class FTPClientTest {
             for (ChannelSftp.LsEntry entry : currentDir) {
                 hostFileNames.add(entry.getFilename());
             }
-        } catch (SftpException e) {}
+        } catch (SftpException e) {
+        }
     }
 
     @Before
@@ -119,7 +118,7 @@ public class FTPClientTest {
     public void targetFileAbsent() {
         try {
             client.get(c, "fu.bar", ".");
-        } catch (SftpException e){
+        } catch (SftpException e) {
             Assert.assertEquals("2: No such file", e.toString());
         }
     }
@@ -137,5 +136,44 @@ public class FTPClientTest {
         assertThat(outContent.toString(), containsString("Download successful"));
     }
 
+    @Test
+    public void testParseCmdPutFailsWithNoParams() {
+        client.parseCmd("put", c);
+        assertThat(errContent.toString(), containsString("Source must be specified"));
+    }
 
+    @Test
+    public void testParseCmdPutPassesWithParams() {
+        String cmdString = "put " + UL_FILE + " .";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Upload successful"));
+    }
+
+    @Test
+    public void testParseCmdPutPassesWithDuplicateName() {
+        String cmdString = "put " + UL_FILE + " .";
+        client.parseCmd(cmdString, c);
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Upload successful"));
+    }
+
+    @Test
+    public void testParseCmdDeletePassesWithParams() {
+        String cmdString = "rm " + UL_FILE + " .";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Delete successful"));
+    }
+
+    @Test
+    public void testParseCmdDeleteFailsWithNoParams() {
+        client.parseCmd("rm", c);
+        assertThat(errContent.toString(), containsString("Source must be specified"));
+    }
+
+    @Test
+    public void testParseCmdDeleteFailsWithFileNotFound() {
+        String cmdString = "rm" + "Notfound.txt" + ".";
+        client.parseCmd(cmdString, c);
+        assertThat(errContent.toString(), containsString("Cannot remeove file because it does't exist"));
+    }
 }
