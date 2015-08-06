@@ -37,8 +37,8 @@ public class FTPClient{
     }
 
     //establish connection
-      JSch jsch = new JSch();
-      JSch.setConfig("StrictHostKeyChecking", "no");
+    JSch jsch = new JSch();
+    JSch.setConfig("StrictHostKeyChecking", "no");
     Session session = null;
     try {
       session = jsch.getSession(userName, HOST, PORT);
@@ -224,7 +224,7 @@ public class FTPClient{
     try {
       sftpChannel.rm(file);
     } catch (SftpException e) {
-      System.err.println(e.getMessage());
+      System.err.println("File does not exist on remote server");
       throw e;
     }
     System.out.println("Delete successful");

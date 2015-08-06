@@ -22,8 +22,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 public class FTPClientTest {
     static ChannelSftp c;
-    public static final String UL_FILE = "upload.txt";
-    public static final String DL_FILE = "dl.txt";
+    public static final String XFER_FILE = "xfer.txt";
     FTPClient client = new FTPClient();
     static File dir = new File(".");
     static File[] fileList;
@@ -37,6 +36,22 @@ public class FTPClientTest {
         localFileNames = new ArrayList();
         for (File f : fileList) {
             localFileNames.add(f.getName());
+        }
+    }
+
+    @Before
+    public void setUpFiles() {
+        //ensure there is a file on the server to get
+        try {
+            Writer writer = new FileWriter(XFER_FILE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            c.put(XFER_FILE);
+        } catch (SftpException e) {
+            e.printStackTrace();
         }
     }
 
@@ -79,22 +94,6 @@ public class FTPClientTest {
         refreshFileList();
     }
 
-    @Before
-    public void setUpFiles() {
-        //ensure there is a file on the server to get
-        try {
-            Writer writer = new FileWriter(UL_FILE);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            c.put(UL_FILE);
-            c.rename(UL_FILE, DL_FILE);
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Before
     public void setUpStreams() {
@@ -110,8 +109,8 @@ public class FTPClientTest {
 
     @Test
     public void targetFilePresent() {
-        Assert.assertTrue("dl.txt absent on host",
-                hostFileNames.contains(DL_FILE));
+        Assert.assertTrue("xfer.txt absent on host",
+                hostFileNames.contains(XFER_FILE));
     }
 
     @Test
@@ -131,7 +130,7 @@ public class FTPClientTest {
 
     @Test
     public void testParseCmdGetPassesWithParams() {
-        String cmdString = "get " + DL_FILE + " .";
+        String cmdString = "get " + XFER_FILE + " .";
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("Download successful"));
     }
@@ -144,14 +143,14 @@ public class FTPClientTest {
 
     @Test
     public void testParseCmdPutPassesWithParams() {
-        String cmdString = "put " + UL_FILE + " .";
+        String cmdString = "put " + XFER_FILE + " .";
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("Upload successful"));
     }
 
     @Test
     public void testParseCmdPutPassesWithDuplicateName() {
-        String cmdString = "put " + UL_FILE + " .";
+        String cmdString = "put " + XFER_FILE + " .";
         client.parseCmd(cmdString, c);
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("Upload successful"));
@@ -159,7 +158,7 @@ public class FTPClientTest {
 
     @Test
     public void testParseCmdDeletePassesWithParams() {
-        String cmdString = "rm " + UL_FILE + " .";
+        String cmdString = "rm " + XFER_FILE;
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("Delete successful"));
     }
@@ -172,8 +171,8 @@ public class FTPClientTest {
 
     @Test
     public void testParseCmdDeleteFailsWithFileNotFound() {
-        String cmdString = "rm" + "Notfound.txt" + ".";
+        String cmdString = "rm " + "Notfound.txt" + ".";
         client.parseCmd(cmdString, c);
-        assertThat(errContent.toString(), containsString("Cannot remeove file because it does't exist"));
+        assertThat(errContent.toString(), containsString("File does not exist on remote server"));
     }
 }
