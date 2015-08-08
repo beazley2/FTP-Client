@@ -112,14 +112,15 @@ public class FTPClient{
           }
         case "put":
           try {
-            String file = (String) itr.next();
+            String source = (String) itr.next();
+            String dest = (String) itr.next();
             try {
-              upload(c, file);
+              upload(c, source, dest);
             } catch (SftpException e) {
               e.printStackTrace();
             }
           } catch (NoSuchElementException e) {
-            usage("Source must be specified");
+            usage("Source and destination must be specified");
           }
         case "rm":
           try {
@@ -193,7 +194,7 @@ public class FTPClient{
     err.println();
     err.println("usage:");
     err.println("get [source] [destination]     : gets file from server");
-    err.println("put [source]                   : puts file on server");
+    err.println("put [source] [destination]     : puts file on server");
     err.println("rm  [source]                   : removes file from server");
     err.println("mkdir [path]                   : creates new directory on server");
     err.println("chmod [permissions] [path]     : changes file permission on the server");
@@ -289,7 +290,7 @@ public class FTPClient{
           System.out.println("Deletion cancelled.");
         }
       } else {
-        System.out.println("File not found.");
+        System.err.println("File does not exist on remote server");
       }
     } catch (SftpException e) {
       throw e;
@@ -316,11 +317,12 @@ public class FTPClient{
   }
 
   // used to upload a file to the server
-  public static void upload(ChannelSftp sftpChannel, String file) throws SftpException {
+  public static void upload(ChannelSftp sftpChannel, String sourceFilePath,
+                            String destDirectoryPath) throws SftpException {
 
-    System.out.println("Attempting to upload " + file + " to server");
+    System.out.println("Attempting to upload " + sourceFilePath + " to server");
     try {
-      sftpChannel.put(file, file);
+      sftpChannel.put(sourceFilePath, destDirectoryPath);
     } catch (SftpException e) {
       System.err.println(e.getMessage());
       throw e;

@@ -2,6 +2,7 @@ package psu.agilemethods.src;
 
 import com.jcraft.jsch.*;
 import org.junit.*;
+import psu.agilemethods.test.FTPTestSetup;
 
 import java.util.ArrayList;
 import java.util.Vector;
@@ -38,9 +39,10 @@ public class FTPClientTest {
   static public void init() {
     JSch jsch = new JSch();
 
-    String user = "beazley2";
+    FTPTestSetup setup = new FTPTestSetup();
+    String password = setup.getPassword();
+    String user = setup.getUsername();
     String host = "ada.cs.pdx.edu";
-    String password = "";
 
     int port = 22;
 
