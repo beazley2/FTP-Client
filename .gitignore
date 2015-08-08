@@ -21,5 +21,6 @@
 hs_err_pid*
  
 psu/agilemethods/test/FTPTestSetup.java
+ftp-test/
 out
 xfer.txt
