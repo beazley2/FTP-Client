@@ -75,9 +75,12 @@ public class FTPClient{
     String cmd = "";
     while (!cmd.equals("exit")) {
       try {
-        cmd = TextUI.getCommand();
+        String curPath = c.pwd();
+        cmd = TextUI.getCommand(curPath);
       } catch (IOException e) {
         e.printStackTrace();
+      } catch (SftpException e) {
+        System.out.println(e.getMessage());
       }
       parseCmd(cmd, c);
     }
@@ -136,7 +139,7 @@ public class FTPClient{
             try {
               mkdir(c, path);
             } catch (SftpException e) {
-              System.out.println(e.getMessage());
+              System.out.println("Failed to create new directory.");
             }
           } catch (NoSuchElementException e) {
             usage("New directory path must be specified.");
