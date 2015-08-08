@@ -95,7 +95,7 @@ public class FTPClient{
     String[] cmd = cmdIn.split("[ ]+");
     ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
     Iterator itr = cmdArgs.iterator();
-    while (itr.hasNext()) {
+    if (itr.hasNext()) {
       String arg = (String) itr.next();
       switch (arg) {
         case "cd":
@@ -187,7 +187,10 @@ public class FTPClient{
           usage("That option is not recognized. Please view README");
           break;
       }
+    } else {
+      System.out.println("No command entered.");
     }
+
   }
 
   private static void error(String message) {
