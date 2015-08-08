@@ -168,15 +168,24 @@ public class FTPClient{
           break;
         case "chmod":
             try {
-              int permissions = Integer.parseInt((String) itr.next(), 8);
-              String path = (String) itr.next();
-              try {
-                chmod(c, permissions, path);
-              } catch (SftpException e) {
-                System.out.println(e.getMessage());
+              String pString = (String) itr.next();
+              if (pString.contains("8") || pString.contains("9")) {
+                System.out.println("Second argument must be in Octal form 000 - 777 representing the desired permission changes. Cannot use 8 or 9");
+              } else {
+                int permissions = Integer.parseInt((String) pString, 8);
+                if (permissions >= 000 && permissions <= 511) {
+                  String path = (String) itr.next();
+                  try {
+                    chmod(c, permissions, path);
+                  } catch (SftpException e) {
+                    System.out.println(e.getMessage());
+                  }
+                } else {
+                  System.out.println("Permissions must be octal 000 - 777 only.");
+                }
               }
             } catch (NumberFormatException e) {
-              System.out.println("Second argument must be an integer representing the desired permission changes.");
+                System.out.println("Second argument must be in Octal form 000 - 777 representing the desired permission changes.");
             } catch (NoSuchElementException e) {
               usage("Permissions and file path must be specified.");
             }
