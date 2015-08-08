@@ -1,18 +1,18 @@
 package psu.agilemethods.src;
 
-
 import com.jcraft.jsch.*;
 
+import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Vector;
-import java.util.Arrays;
 
 import static psu.agilemethods.src.TextUI.*;
+
+import java.io.PrintStream;
+import java.util.*;
 
 /**
  * Implements a simple FTP client
@@ -20,125 +20,200 @@ import static psu.agilemethods.src.TextUI.*;
  * @version 0.1
  */
 public class FTPClient{
-
   public static final String HOST = "ada.cs.pdx.edu";
   public static final int PORT = 22;
-  public static final String FILE_TO_DL = "download.txt";
-  public static final String FILE_TO_UL = "upload.txt";
-  public static BufferedReader br;
+  static ChannelSftp c;
 
   public static void main(String[] args) {
-    br = new BufferedReader(new InputStreamReader(System.in));
     String userName = null;
     String password = null;
     Boolean quit = false;
 
-    start();
-
-
+    TextUI.start();
     try {
-      JSch jsch = new JSch();
-      if (args.length != 2) {
-        cmdError();
-        System.exit(1);
-      } else {
-        userName = args[0];
-        password = args[1];
-      }
+      userName = TextUI.getUsername();
+      password = TextUI.getPassword();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
 
-      JSch.setConfig("StrictHostKeyChecking", "no");
-      Session session = jsch.getSession(userName, HOST, PORT);
-      session.setPassword(password);
+    //check for missing username
+    if (userName == null) {
+      usage("Missing command line arguments");
+    } else if (password == null) {
+      usage("Missing password");
+    }
 
-      session.connect();
-
-      Channel channel = session.openChannel("sftp");
-      channel.connect();
-
-      ChannelSftp sftpChannel = (ChannelSftp) channel;
-
-      System.out.println("Connected to " + HOST);
-
-      while (!quit) {
-        ArrayList<String> commands = getCommand(sftpChannel);
-        quit = execCommand(sftpChannel, commands);
-      }
-
-      channel.disconnect();
-
+    //establish connection
+    JSch jsch = new JSch();
+    JSch.setConfig("StrictHostKeyChecking", "no");
+    Session session = null;
+    try {
+      session = jsch.getSession(userName, HOST, PORT);
     } catch (JSchException e) {
-      System.err.println(e.getMessage());
+      e.printStackTrace();
+    }
+    if (session != null) {
+      session.setPassword(password);
+      try {
+        session.connect();
+        Channel channel = session.openChannel("sftp");
+        channel.connect();
+        c = (ChannelSftp) channel;
+        System.out.println("Connected to " + HOST);
+      } catch (JSchException e) {
+        System.err.println("Failed to create session");
+        System.exit(1);
+      }
+    } else {
+      error("Failed to create session");
     }
 
 
+    //enter console mode
 
+    String cmd = "";
+    while (!cmd.equals("exit")) {
+      try {
+        cmd = TextUI.getCommand();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      parseCmd(cmd, c);
+    }
 
+    if (session != null) {
+      session.disconnect();
+    }
     System.exit(0);
   }
 
-  private static Boolean execCommand(ChannelSftp sftpChannel, ArrayList<String> commands) {
-    boolean quit = false;
-    int size = commands.size();
-    if (!commands.isEmpty()) {
-      String cmd = commands.get(0).toLowerCase();
-      switch (cmd) {
+  public static void parseCmd(String cmdIn, ChannelSftp c) {
+    String[] cmd = cmdIn.split("[ ]+");
+    ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
+    Iterator itr = cmdArgs.iterator();
+    while (itr.hasNext()) {
+      String arg = (String) itr.next();
+      switch (arg) {
+        case "get":
+          try {
+            String srcPath = (String) itr.next();
+            String destPath = (String) itr.next();
+            try {
+              get(c, srcPath, destPath);
+            } catch (SftpException e) {
+              e.printStackTrace();
+            }
+          } catch (NoSuchElementException e) {
+            usage("Source and destination path must be specified");
+          }
+        case "put":
+          try {
+            String file = (String) itr.next();
+            try {
+              upload(c, file);
+            } catch (SftpException e) {
+              e.printStackTrace();
+            }
+          } catch (NoSuchElementException e) {
+            usage("Source must be specified");
+          }
+        case "rm":
+          try {
+            String file = (String) itr.next();
+            try {
+              rmRemote(c, file);
+            } catch (SftpException e) {
+              System.out.println(e.getMessage());
+            }
+          } catch (NoSuchElementException e) {
+            usage("Source must be specified");
+          }
+          break;
         case "mkdir":
-          if (size < 2) {
-            missingCommandArguments(cmd, "mkdir <path> - path can be complete or relative to current directory.");
-          } else {
-            mkdir(sftpChannel, commands.get(1));
+          try {
+            String path = (String) itr.next();
+            try {
+              mkdir(c, path);
+            } catch (SftpException e) {
+              System.out.println(e.getMessage());
+            }
+          } catch (NoSuchElementException e) {
+            usage("New directory path must be specified.");
           }
           break;
         case "ls":
-          lsRemote(sftpChannel);
+          lsRemote(c);
           break;
         case "dir":
-          lsLocal(sftpChannel.lpwd());
-          break;
-        case "rm":
-          if (size < 2) {
-            missingCommandArguments(cmd, "rm <filepath> - file path can be complete or relative to current directory.");
-          } else {
-            rmRemote(sftpChannel, commands.get(1));
-          }
+          lsLocal(c.lpwd());
           break;
         case "chmod":
-          if (size < 3) {
-            missingCommandArguments(cmd, "chmod <permissions> <filepath> - file path can be complete or relative to current directory.");
-          } else {
             try {
-              int permissions = Integer.parseInt(commands.get(1));
-              chmod(sftpChannel, permissions, commands.get(2));
+              int permissions = Integer.parseInt((String) itr.next());
+              String path = (String) itr.next();
+              try {
+                chmod(c, permissions, path);
+              } catch (SftpException e) {
+                System.out.println(e.getMessage());
+              }
             } catch (NumberFormatException e) {
               System.out.println("Second argument must be an integer representing the desired permission changes.");
+            } catch (NoSuchElementException e) {
+              usage("Permissions and file path must be specified.");
             }
-          }
           break;
-        case "quit":
-          quit = true;
+        case "exit":
           break;
         default:
-          unknownCommand(cmd);
-        }
+          usage("That option is not recognized. Please view README");
+          break;
       }
-    return quit;
+    }
   }
 
-  private static ArrayList<String> getCommand(ChannelSftp sftpChannel) {
-    String delimiters = "[ ]+";
-    String cmds = "";
-    try {
-      System.out.print(sftpChannel.pwd() + ">");
-    } catch (SftpException e) {
-      System.err.println(e.getMessage());
+  private static void error(String message) {
+    PrintStream err = System.err;
+    err.println("** " + message);
+
+    System.exit(1);
     }
-    try {
-      cmds = br.readLine();
-    } catch (IOException e) {
-      System.err.println(e.getMessage());
+
+  /**
+   * Prints usage information for this program and exits
+   *
+   * @param message An error message to print
+   */
+  private static void usage(String message) {
+    PrintStream err = System.err;
+    err.println("** " + message);
+    err.println();
+    err.println("usage:");
+    err.println("get [source] [destination]     : gets file from server");
+    err.println("put [source]                   : puts file on server");
+    err.println("rm  [source]                   : removes file from server");
+    err.println("mkdir [path]                   : creates new directory on server");
+    err.println("chmod [permissions] [path]     : changes file permission on the server");
+    err.println("exit                           : exits from ftp console");
+    err.println();
+    err.println("This program connects to an FTP server");
+    err.println("Default server: " + HOST);
+    err.println("Default port: " + PORT);
+    err.println();
+
+  }
+
+  static void lsLocal(String path) {
+    File dir = new File(path);
+    File[] fileList = dir.listFiles();
+    for (File f : fileList) {
+      if (f.isDirectory()) {
+        System.out.println("Directory:\t" + f.getName());
+      }
+      if (f.isFile()) {
+        System.out.println("File:\t\t" + f.getName());
+      }
     }
-    String[] split = cmds.split(delimiters);
-    return new ArrayList<>(Arrays.asList(split));
   }
 
   static void lsRemote(ChannelSftp ch) {
@@ -152,41 +227,27 @@ public class FTPClient{
     }
   }
 
-  static void lsLocal(String path) {
-    File dir = new File(path);
-    File[] fileList = dir.listFiles();
-    if (fileList != null) {
-      for (File f : fileList) {
-        if (f.isDirectory()) {
-          System.out.println("Directory:\t" + f.getName());
-        }
-        if (f.isFile()) {
-          System.out.println("File:\t\t" + f.getName());
-        }
-      }
-    }
-  }
-
-  static void chmod(ChannelSftp sftpChannel, int permissions, String path) {
+  static void chmod(ChannelSftp sftpChannel, int permissions, String path) throws SftpException {
     try {
       sftpChannel.chmod(permissions, path);
       System.out.println("Permissions changed.");
     } catch (SftpException e) {
-      System.out.println(e.getMessage());
+      throw e;
     }
   }
 
-  static void mkdir(ChannelSftp sftpChannel, String path) {
+  static void mkdir(ChannelSftp sftpChannel, String path) throws SftpException {
     try {
       sftpChannel.mkdir(path);
       System.out.println("Directory " + path + " created.");
     } catch (SftpException e) {
-      System.out.println("Directory already exists.");
+      throw e;
     }
   }
 
-  static void rmRemote(ChannelSftp sftpChannel, String path) {
+  static void rmRemote(ChannelSftp sftpChannel, String path) throws SftpException {
     Vector<ChannelSftp.LsEntry> files;
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
     String fileName;
     String dirPath = "";
     String[] paths = path.split("/");
@@ -202,11 +263,11 @@ public class FTPClient{
           dirPath += paths[i] + "/";
         }
         files = sftpChannel.ls(dirPath);
-        fileName = paths[paths.length-1];
+        fileName = paths[paths.length - 1];
       }
 
       for (ChannelSftp.LsEntry file : files) {
-        if (file.getFilename().equals(fileName)){
+        if (file.getFilename().equals(fileName)) {
           exists = true;
           break;
         }
@@ -228,21 +289,46 @@ public class FTPClient{
         System.out.println("File not found.");
       }
     } catch (SftpException e) {
-      System.out.println("File not found. No files deleted.");
+      throw e;
     } catch (IOException e) {
       System.err.println(e.getMessage());
     }
-
   }
+  // "public" for accessibility from "FTPClientTest.java"
+  // (absent a more modular structure for the project)
+  public static void get(ChannelSftp sftpChannel, String sourceFilePath,
+                         String destDirectoryPath) throws SftpException {
+    System.out.println("Attempting to download \"" + sourceFilePath + "\" from server");
 
-  static void pause() {
     try {
-      Thread.sleep(2000);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+      sftpChannel.get(sourceFilePath, destDirectoryPath);
+    } catch (SftpException e) {
+      //System.err.println(e.getMessage());
+      throw e;
     }
+
+    System.out.println("Download successful");
+
+    lsLocal(".");
   }
+
+  // used to upload a file to the server
+  public static void upload(ChannelSftp sftpChannel, String file) throws SftpException {
+
+    System.out.println("Attempting to upload " + file + " to server");
+    try {
+      sftpChannel.put(file, file);
+    } catch (SftpException e) {
+      System.err.println(e.getMessage());
+      throw e;
+    }
+    System.out.println("Upload successful");
+    lsRemote(sftpChannel);
+  }
+
 }
+
+
 
 
 
