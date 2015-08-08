@@ -98,6 +98,18 @@ public class FTPClient{
     while (itr.hasNext()) {
       String arg = (String) itr.next();
       switch (arg) {
+        case "cd":
+          try {
+            String path = (String) itr.next();
+            try {
+              cd(c, path);
+            } catch (SftpException e) {
+              System.out.println(e.getMessage());
+            }
+          } catch (NoSuchElementException e) {
+            usage("Desired path must be specified");
+          }
+          break;
         case "get":
           try {
             String srcPath = (String) itr.next();
@@ -105,11 +117,12 @@ public class FTPClient{
             try {
               get(c, srcPath, destPath);
             } catch (SftpException e) {
-              e.printStackTrace();
+              System.out.println(e.getMessage());
             }
           } catch (NoSuchElementException e) {
             usage("Source and destination path must be specified");
           }
+          break;
         case "put":
           try {
             String source = (String) itr.next();
@@ -117,11 +130,12 @@ public class FTPClient{
             try {
               upload(c, source, dest);
             } catch (SftpException e) {
-              e.printStackTrace();
+              System.out.println(e.getMessage());
             }
           } catch (NoSuchElementException e) {
             usage("Source and destination must be specified");
           }
+          break;
         case "rm":
           try {
             String file = (String) itr.next();
@@ -154,7 +168,7 @@ public class FTPClient{
           break;
         case "chmod":
             try {
-              int permissions = Integer.parseInt((String) itr.next());
+              int permissions = Integer.parseInt((String) itr.next(), 8);
               String path = (String) itr.next();
               try {
                 chmod(c, permissions, path);
@@ -189,10 +203,11 @@ public class FTPClient{
    * @param message An error message to print
    */
   private static void usage(String message) {
-    PrintStream err = System.err;
+    PrintStream err = System.out;
     err.println("** " + message);
     err.println();
     err.println("usage:");
+    err.println("cd [path]                      : change remote directory");
     err.println("get [source] [destination]     : gets file from server");
     err.println("put [source] [destination]     : puts file on server");
     err.println("rm  [source]                   : removes file from server");
@@ -329,6 +344,14 @@ public class FTPClient{
     }
     System.out.println("Upload successful");
     lsRemote(sftpChannel);
+  }
+
+  public static void cd(ChannelSftp c, String path) throws SftpException {
+    try {
+      c.cd(path);
+    } catch (SftpException e) {
+      throw e;
+    }
   }
 
 }
