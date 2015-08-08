@@ -102,6 +102,18 @@ public class FTPClient{
             rmRemote(sftpChannel, commands.get(1));
           }
           break;
+        case "chmod":
+          if (size < 3) {
+            missingCommandArguments(cmd, "chmod <permissions> <filepath> - file path can be complete or relative to current directory.");
+          } else {
+            try {
+              int permissions = Integer.parseInt(commands.get(1));
+              chmod(sftpChannel, permissions, commands.get(2));
+            } catch (NumberFormatException e) {
+              System.out.println("Second argument must be an integer representing the desired permission changes.");
+            }
+          }
+          break;
         case "quit":
           quit = true;
           break;
@@ -152,6 +164,15 @@ public class FTPClient{
           System.out.println("File:\t\t" + f.getName());
         }
       }
+    }
+  }
+
+  static void chmod(ChannelSftp sftpChannel, int permissions, String path) {
+    try {
+      sftpChannel.chmod(permissions, path);
+      System.out.println("Permissions changed.");
+    } catch (SftpException e) {
+      System.out.println(e.getMessage());
     }
   }
 
