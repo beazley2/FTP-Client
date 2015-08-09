@@ -190,6 +190,26 @@ public class FTPClient{
               usage("Permissions and file path must be specified.");
             }
           break;
+        case "pwd":
+          try {
+            pwd(c);
+          } catch (SftpException e) {
+            System.out.println(e.getMessage());
+          }
+          break;
+        case "lpwd":
+          lpwd(c);
+          break;
+        case "lcd":
+          try {
+            String path = (String) itr.next();
+            lcd(c, path);
+          } catch (NoSuchElementException e) {
+            System.out.println("Path must be specified.");
+          } catch (SftpException e) {
+            System.out.println(e.getMessage());
+          }
+          break;
         case "exit":
           break;
         default:
@@ -297,14 +317,16 @@ public class FTPClient{
         fileName = paths[paths.length - 1];
       }
 
-      for (ChannelSftp.LsEntry file : files) {
-        if (file.getFilename().equals(fileName)) {
-          exists = true;
-          break;
+      if (!fileName.contains("*")) {
+        for (ChannelSftp.LsEntry file : files) {
+          if (file.getFilename().equals(fileName)) {
+            exists = true;
+            break;
+          }
         }
       }
 
-      if (exists) {
+      if (exists || fileName.contains("*")) {
         System.out.println("Deleting " + path);
         System.out.println("Are you sure? (y/n)");
         String confirm = br.readLine();
@@ -317,7 +339,8 @@ public class FTPClient{
           System.out.println("Deletion cancelled.");
         }
       } else {
-        System.err.println("File does not exist on remote server");
+        System.err.println(fileName + " does not exist on remote server");
+
       }
     } catch (SftpException e) {
       throw e;
@@ -340,7 +363,6 @@ public class FTPClient{
 
     System.out.println("Download successful");
 
-    lsLocal(".");
   }
 
   // used to upload a file to the server
@@ -366,6 +388,25 @@ public class FTPClient{
     }
   }
 
+  public static void pwd(ChannelSftp c) throws SftpException {
+    try {
+      System.out.println("Current remote directory: " + c.pwd());
+    } catch (SftpException e) {
+      throw e;
+    }
+  }
+
+  public static void lcd(ChannelSftp c, String path) throws SftpException {
+    try {
+      c.lcd(path);
+    } catch (SftpException e) {
+      throw e;
+    }
+  }
+
+  public static void lpwd(ChannelSftp c)  {
+    System.out.println("Current local directory: " + c.lpwd());
+  }
 }
 
 
