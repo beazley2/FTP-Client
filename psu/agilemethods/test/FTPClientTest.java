@@ -20,6 +20,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class FTPClientTest {
     static ChannelSftp c;
     public static final String XFER_FILE = "xfer.txt";
+    public static final String XFER_FILE2 = "xfer2.txt";
+    public static final String XFER_FILE3 = "xfer3.txt";
     FTPClient client = new FTPClient();
     static File dir = new File(".");
     static File[] fileList;
@@ -107,7 +109,7 @@ public class FTPClientTest {
     @Test
     public void targetFilePresent() {
         Assert.assertTrue("xfer.txt absent on host",
-                hostFileNames.contains(XFER_FILE));
+            hostFileNames.contains(XFER_FILE));
     }
 
     @Test
@@ -153,6 +155,23 @@ public class FTPClientTest {
         assertThat(outContent.toString(), containsString("Upload successful"));
     }
 
+    @Test
+    public void testParseCmdPutFailsWithNonpresentFile() {
+        String cmdString = "put idontexist.txt .";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Source file idontexist.txt not found"));
+    }
+
+    @Test
+    public void testParseCmdPutWithTwoFilesPasses() {
+        String cmdString = "put " + XFER_FILE2 + " . " + XFER_FILE3 + " . ";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Upload successful"));
+        assertThat("See if XFER_FILE2 was found", (!outContent.toString().contains("Source file " + XFER_FILE2 + "not found")));
+        assertThat("See if XFER_FILE3 was found", (!outContent.toString().contains("Source file " + XFER_FILE3 + "not found")));
+    }
+
+
     @Ignore
     @Test
     public void testParseCmdDeletePassesWithParams() {
@@ -182,7 +201,7 @@ public class FTPClientTest {
     }
 
     @Test
-    public void testParseCmdlcdFailsWithInvlidDirectory() {
+    public void testParseCmdlcdFailsWithInvalidDirectory() {
         String cmdString = "lcd idontexist";
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("No such directory"));

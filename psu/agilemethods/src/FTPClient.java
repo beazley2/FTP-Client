@@ -125,13 +125,17 @@ public class FTPClient{
           break;
         case "put":
           try {
-            String source = (String) itr.next();
-            String dest = (String) itr.next();
-            try {
-              upload(c, source, dest);
-            } catch (SftpException e) {
-              System.out.println(e.getMessage());
-            }
+            String source;
+            String dest;
+            do {
+              source = (String) itr.next();
+              dest = (String) itr.next();
+              try {
+                upload(c, source, dest);
+              } catch (SftpException e) {
+                System.out.println("Source file " + source + " not found");
+              }
+            } while (itr.hasNext());
           } catch (NoSuchElementException e) {
             usage("Source and destination must be specified");
           }
@@ -242,10 +246,15 @@ public class FTPClient{
     err.println("** " + message);
     err.println();
     err.println("usage:");
+    err.println("pwd                            : shows current remote directory");
     err.println("cd [path]                      : change remote directory");
+    err.println("lpwd                           : shows current local directory");
+    err.println("lcd [path]                     : change local directory");
     err.println("get [source] [destination]     : gets file from server");
-    err.println("put [source] [destination]     : puts file on server");
-    err.println("rm  [source]                   : removes file from server");
+    err.println("put [source] [destination]     : puts file on server (wild cards are permitted)");
+    err.println("put [[source] [destination]]*  : puts multiple files on server");
+    err.println("rm [file]                      : removes file from server (wild cards are permtited)");
+    err.println("rm {file]*                     : removes multiple files from server");
     err.println("mkdir [path]                   : creates new directory on server");
     err.println("chmod [permissions] [path]     : changes file permission on the server");
     err.println("exit                           : exits from ftp console");
@@ -376,7 +385,6 @@ public class FTPClient{
     try {
       sftpChannel.put(sourceFilePath, destDirectoryPath);
     } catch (SftpException e) {
-      System.err.println(e.getMessage());
       throw e;
     }
     System.out.println("Upload successful");
