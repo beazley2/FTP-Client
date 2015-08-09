@@ -122,7 +122,7 @@ public class FTPClientTest {
     @Test
     public void testParseCmdGetFailsWithNoParams() {
         client.parseCmd("get", c);
-        assertThat(errContent.toString(), containsString("Source and destination path must be specified"));
+        assertThat(outContent.toString(), containsString("Source and destination path must be specified"));
     }
 
     @Test
@@ -135,7 +135,7 @@ public class FTPClientTest {
     @Test
     public void testParseCmdPutFailsWithNoParams() {
         client.parseCmd("put", c);
-        assertThat(errContent.toString(), containsString("Source must be specified"));
+        assertThat(outContent.toString(), containsString("Source and destination must be specified"));
     }
 
     @Test
@@ -164,13 +164,27 @@ public class FTPClientTest {
     @Test
     public void testParseCmdDeleteFailsWithNoParams() {
         client.parseCmd("rm", c);
-        assertThat(errContent.toString(), containsString("Source must be specified"));
+        assertThat(outContent.toString(), containsString("Source must be specified"));
     }
 
     @Test
     public void testParseCmdDeleteFailsWithFileNotFound() {
         String cmdString = "rm " + "Notfound.txt" + ".";
         client.parseCmd(cmdString, c);
-        assertThat(errContent.toString(), containsString("File does not exist on remote server"));
+        assertThat(outContent.toString(), containsString("Notfound.txt. does not exist on remote server"));
+    }
+
+    @Test
+    public void testParseCmdcdFailsWithInvalidDirectory() {
+        String cmdString = "cd idontexist";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("No such directory"));
+    }
+
+    @Test
+    public void testParseCmdlcdFailsWithInvlidDirectory() {
+        String cmdString = "lcd idontexist";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("No such directory"));
     }
 }

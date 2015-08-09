@@ -104,7 +104,7 @@ public class FTPClient{
             try {
               cd(c, path);
             } catch (SftpException e) {
-              System.out.println(e.getMessage());
+              System.out.println("No such directory");
             }
           } catch (NoSuchElementException e) {
             usage("Desired path must be specified");
@@ -138,12 +138,15 @@ public class FTPClient{
           break;
         case "rm":
           try {
-            String file = (String) itr.next();
-            try {
-              rmRemote(c, file);
-            } catch (SftpException e) {
-              System.out.println(e.getMessage());
-            }
+            String file;
+            do {
+              file = (String) itr.next();
+              try {
+                rmRemote(c, file);
+              } catch (SftpException e) {
+                System.out.println(e.getMessage());
+              }
+            } while (itr.hasNext());
           } catch (NoSuchElementException e) {
             usage("Source must be specified");
           }
@@ -339,7 +342,7 @@ public class FTPClient{
           System.out.println("Deletion cancelled.");
         }
       } else {
-        System.err.println(fileName + " does not exist on remote server");
+        System.out.println(fileName + " does not exist on remote server");
 
       }
     } catch (SftpException e) {
