@@ -1,0 +1,2 @@
+Test file to test local
+to remote uploading via sftpChannel.put()

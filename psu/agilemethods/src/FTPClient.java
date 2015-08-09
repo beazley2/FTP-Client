@@ -2,8 +2,15 @@ package psu.agilemethods.src;
 
 import com.jcraft.jsch.*;
 
+import javax.swing.*;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+
+import static psu.agilemethods.src.TextUI.*;
+
 import java.io.PrintStream;
 import java.util.*;
 
@@ -20,6 +27,7 @@ public class FTPClient{
   public static void main(String[] args) {
     String userName = null;
     String password = null;
+    Boolean quit = false;
 
     TextUI.start();
     try {
@@ -52,7 +60,7 @@ public class FTPClient{
         Channel channel = session.openChannel("sftp");
         channel.connect();
         c = (ChannelSftp) channel;
-        System.out.println("Connected");
+        System.out.println("Connected to " + HOST);
       } catch (JSchException e) {
         System.err.println("Failed to create session");
         System.exit(1);
@@ -67,9 +75,12 @@ public class FTPClient{
     String cmd = "";
     while (!cmd.equals("exit")) {
       try {
-        cmd = TextUI.getCommand();
+        String curPath = c.pwd();
+        cmd = TextUI.getCommand(curPath);
       } catch (IOException e) {
         e.printStackTrace();
+      } catch (SftpException e) {
+        System.out.println(e.getMessage());
       }
       parseCmd(cmd, c);
     }
@@ -81,12 +92,24 @@ public class FTPClient{
   }
 
   public static void parseCmd(String cmdIn, ChannelSftp c) {
-    String[] cmd = cmdIn.split(" ");
+    String[] cmd = cmdIn.split("[ ]+");
     ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
     Iterator itr = cmdArgs.iterator();
-    while (itr.hasNext()) {
+    if (itr.hasNext()) {
       String arg = (String) itr.next();
       switch (arg) {
+        case "cd":
+          try {
+            String path = (String) itr.next();
+            try {
+              cd(c, path);
+            } catch (SftpException e) {
+              System.out.println(e.getMessage());
+            }
+          } catch (NoSuchElementException e) {
+            usage("Desired path must be specified");
+          }
+          break;
         case "get":
           try {
             String srcPath = (String) itr.next();
@@ -94,33 +117,78 @@ public class FTPClient{
             try {
               get(c, srcPath, destPath);
             } catch (SftpException e) {
-              e.printStackTrace();
+              System.out.println(e.getMessage());
             }
           } catch (NoSuchElementException e) {
             usage("Source and destination path must be specified");
           }
+          break;
         case "put":
           try {
-            String file = (String) itr.next();
+            String source = (String) itr.next();
+            String dest = (String) itr.next();
             try {
-              upload(c, file);
+              upload(c, source, dest);
             } catch (SftpException e) {
-              e.printStackTrace();
+              System.out.println(e.getMessage());
             }
           } catch (NoSuchElementException e) {
-            usage("Source must be specified");
+            usage("Source and destination must be specified");
           }
+          break;
         case "rm":
           try {
             String file = (String) itr.next();
             try {
-              delete(c, file);
+              rmRemote(c, file);
             } catch (SftpException e) {
-              e.printStackTrace();
+              System.out.println(e.getMessage());
             }
           } catch (NoSuchElementException e) {
             usage("Source must be specified");
           }
+          break;
+        case "mkdir":
+          try {
+            String path = (String) itr.next();
+            try {
+              mkdir(c, path);
+            } catch (SftpException e) {
+              System.out.println("Failed to create new directory.");
+            }
+          } catch (NoSuchElementException e) {
+            usage("New directory path must be specified.");
+          }
+          break;
+        case "ls":
+          lsRemote(c);
+          break;
+        case "dir":
+          lsLocal(c.lpwd());
+          break;
+        case "chmod":
+            try {
+              String pString = (String) itr.next();
+              if (pString.contains("8") || pString.contains("9")) {
+                System.out.println("Second argument must be in Octal form 000 - 777 representing the desired permission changes. Cannot use 8 or 9");
+              } else {
+                int permissions = Integer.parseInt((String) pString, 8);
+                if (permissions >= 000 && permissions <= 511) {
+                  String path = (String) itr.next();
+                  try {
+                    chmod(c, permissions, path);
+                  } catch (SftpException e) {
+                    System.out.println(e.getMessage());
+                  }
+                } else {
+                  System.out.println("Permissions must be octal 000 - 777 only.");
+                }
+              }
+            } catch (NumberFormatException e) {
+                System.out.println("Second argument must be in Octal form 000 - 777 representing the desired permission changes.");
+            } catch (NoSuchElementException e) {
+              usage("Permissions and file path must be specified.");
+            }
           break;
         case "exit":
           break;
@@ -128,7 +196,10 @@ public class FTPClient{
           usage("That option is not recognized. Please view README");
           break;
       }
+    } else {
+      System.out.println("No command entered.");
     }
+
   }
 
   private static void error(String message) {
@@ -144,21 +215,23 @@ public class FTPClient{
    * @param message An error message to print
    */
   private static void usage(String message) {
-    PrintStream err = System.err;
+    PrintStream err = System.out;
     err.println("** " + message);
     err.println();
     err.println("usage:");
+    err.println("cd [path]                      : change remote directory");
     err.println("get [source] [destination]     : gets file from server");
-    err.println("put [source]                   : puts file on server");
+    err.println("put [source] [destination]     : puts file on server");
     err.println("rm  [source]                   : removes file from server");
+    err.println("mkdir [path]                   : creates new directory on server");
+    err.println("chmod [permissions] [path]     : changes file permission on the server");
     err.println("exit                           : exits from ftp console");
     err.println();
-    err.println("This simple program connects to an FTP server");
+    err.println("This program connects to an FTP server");
     err.println("Default server: " + HOST);
     err.println("Default port: " + PORT);
     err.println();
 
-    //System.exit(1);
   }
 
   static void lsLocal(String path) {
@@ -185,6 +258,73 @@ public class FTPClient{
     }
   }
 
+  static void chmod(ChannelSftp sftpChannel, int permissions, String path) throws SftpException {
+    try {
+      sftpChannel.chmod(permissions, path);
+      System.out.println("Permissions changed.");
+    } catch (SftpException e) {
+      throw e;
+    }
+  }
+
+  static void mkdir(ChannelSftp sftpChannel, String path) throws SftpException {
+    try {
+      sftpChannel.mkdir(path);
+      System.out.println("Directory " + path + " created.");
+    } catch (SftpException e) {
+      throw e;
+    }
+  }
+
+  static void rmRemote(ChannelSftp sftpChannel, String path) throws SftpException {
+    Vector<ChannelSftp.LsEntry> files;
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    String fileName;
+    String dirPath = "";
+    String[] paths = path.split("/");
+    boolean exists = false;
+
+
+    try {
+      if (paths.length == 1) {
+        files = sftpChannel.ls(sftpChannel.pwd());
+        fileName = path;
+      } else {
+        for (int i = 0; i < paths.length - 1; i++) {
+          dirPath += paths[i] + "/";
+        }
+        files = sftpChannel.ls(dirPath);
+        fileName = paths[paths.length - 1];
+      }
+
+      for (ChannelSftp.LsEntry file : files) {
+        if (file.getFilename().equals(fileName)) {
+          exists = true;
+          break;
+        }
+      }
+
+      if (exists) {
+        System.out.println("Deleting " + path);
+        System.out.println("Are you sure? (y/n)");
+        String confirm = br.readLine();
+        String[] confirmSplit = confirm.split("[ ]+");
+        confirm = confirmSplit[0].toLowerCase();
+        if (confirm.equals("y") || confirm.equals("yes")) {
+          sftpChannel.rm(path);
+          System.out.println(fileName + " deleted.");
+        } else {
+          System.out.println("Deletion cancelled.");
+        }
+      } else {
+        System.err.println("File does not exist on remote server");
+      }
+    } catch (SftpException e) {
+      throw e;
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+    }
+  }
   // "public" for accessibility from "FTPClientTest.java"
   // (absent a more modular structure for the project)
   public static void get(ChannelSftp sftpChannel, String sourceFilePath,
@@ -201,15 +341,15 @@ public class FTPClient{
     System.out.println("Download successful");
 
     lsLocal(".");
-
   }
 
   // used to upload a file to the server
-  public static void upload(ChannelSftp sftpChannel, String file) throws SftpException {
+  public static void upload(ChannelSftp sftpChannel, String sourceFilePath,
+                            String destDirectoryPath) throws SftpException {
 
-    System.out.println("Attempting to upload " + file + " to server");
+    System.out.println("Attempting to upload " + sourceFilePath + " to server");
     try {
-      sftpChannel.put(file, file);
+      sftpChannel.put(sourceFilePath, destDirectoryPath);
     } catch (SftpException e) {
       System.err.println(e.getMessage());
       throw e;
@@ -218,17 +358,12 @@ public class FTPClient{
     lsRemote(sftpChannel);
   }
 
-  // used to delete a file from the server
-  public static void delete(ChannelSftp sftpChannel, String file) throws SftpException {
-    System.out.println("Deleting " + file + " from remote");
+  public static void cd(ChannelSftp c, String path) throws SftpException {
     try {
-      sftpChannel.rm(file);
+      c.cd(path);
     } catch (SftpException e) {
-      System.err.println("File does not exist on remote server");
       throw e;
     }
-    System.out.println("Delete successful");
-    lsRemote(sftpChannel);
   }
 
 }

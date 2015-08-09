@@ -52,8 +52,9 @@ public class TextUI {
         return (new BufferedReader(new InputStreamReader(System.in))).readLine();
     }
 
-    public static String getCommand() throws IOException {
-        System.out.print(">");
+    public static String getCommand(String path) throws IOException {
+        System.out.print(path + ">");
         return (new BufferedReader(new InputStreamReader(System.in))).readLine();
     }
+
 }
