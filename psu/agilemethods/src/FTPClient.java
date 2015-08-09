@@ -71,7 +71,11 @@ public class FTPClient{
       } catch (IOException e) {
         e.printStackTrace();
       }
-      parseCmd(cmd, c);
+      try {
+        parseCmd(cmd, c);
+      } catch (SftpException e) {
+        e.printStackTrace();
+      }
     }
 
     if (session != null) {
@@ -80,13 +84,20 @@ public class FTPClient{
     System.exit(0);
   }
 
-  public static void parseCmd(String cmdIn, ChannelSftp c) {
+  public static void parseCmd(String cmdIn, ChannelSftp c) throws SftpException {
     String[] cmd = cmdIn.split(" ");
     ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
     Iterator itr = cmdArgs.iterator();
     while (itr.hasNext()) {
       String arg = (String) itr.next();
       switch (arg) {
+        case "cd":
+          String path = (itr.hasNext()) ? (String) itr.next() : "";
+          try {
+            changeDir(c, path);
+          } catch (SftpException e) {
+            e.printStackTrace();
+          }
         case "get":
           try {
             String srcPath = (String) itr.next();
@@ -202,6 +213,19 @@ public class FTPClient{
 
     lsLocal(".");
 
+  }
+
+  // change directory
+  public static void changeDir(ChannelSftp sftpChannel, String path) throws SftpException {
+    System.out.println("Attempting to change directory");
+    try {
+      sftpChannel.cd(path);
+    } catch (SftpException e){
+      System.err.println(e.getMessage());
+      throw e;
+    }
+    System.out.println("Directory changed");
+    lsRemote(sftpChannel);
   }
 
   // used to upload a file to the server

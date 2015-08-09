@@ -175,4 +175,20 @@ public class FTPClientTest {
         client.parseCmd(cmdString, c);
         assertThat(errContent.toString(), containsString("File does not exist on remote server"));
     }
+
+    @Test
+    public void testParseCmdChangeDirectoryPassesWithEmptystringParam() {
+        String cmdString = "";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Directory changed"));
+    }
+
+
+    @Test
+    public void testParseCmdChangeDirectoryPassesWithEmptystringParam() {
+        String cmdString = "";
+        client.parseCmd(cmdString, c);
+        assertThat(outContent.toString(), containsString("Directory changed"));
+    }
+
 }
