@@ -71,11 +71,7 @@ public class FTPClient{
       } catch (IOException e) {
         e.printStackTrace();
       }
-      try {
-        parseCmd(cmd, c);
-      } catch (SftpException e) {
-        e.printStackTrace();
-      }
+      parseCmd(cmd, c);
     }
 
     if (session != null) {
@@ -84,7 +80,7 @@ public class FTPClient{
     System.exit(0);
   }
 
-  public static void parseCmd(String cmdIn, ChannelSftp c) throws SftpException {
+  public static void parseCmd(String cmdIn, ChannelSftp c)  {
     String[] cmd = cmdIn.split(" ");
     ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
     Iterator itr = cmdArgs.iterator();
@@ -92,11 +88,15 @@ public class FTPClient{
       String arg = (String) itr.next();
       switch (arg) {
         case "cd":
-          String path = (itr.hasNext()) ? (String) itr.next() : "";
           try {
-            changeDir(c, path);
-          } catch (SftpException e) {
-            e.printStackTrace();
+            String path = (itr.hasNext()) ? (String) itr.next() : "";
+            try {
+              changeDir(c, path);
+            } catch (SftpException e1) {
+              e1.printStackTrace();
+            }
+          } catch (NoSuchElementException e) {
+            usage("Destination input could not be resolved");
           }
         case "get":
           try {
@@ -110,17 +110,9 @@ public class FTPClient{
           } catch (NoSuchElementException e) {
             usage("Source and destination path must be specified");
           }
-        case "put":
-          try {
-            String file = (String) itr.next();
-            try {
-              upload(c, file);
-            } catch (SftpException e) {
-              e.printStackTrace();
-            }
-          } catch (NoSuchElementException e) {
-            usage("Source must be specified");
-          }
+          usage("Source and destination path must be specified");
+        case "ls":
+          lsRemote(c);
         case "rm":
           try {
             String file = (String) itr.next();
@@ -217,7 +209,6 @@ public class FTPClient{
 
   // change directory
   public static void changeDir(ChannelSftp sftpChannel, String path) throws SftpException {
-    System.out.println("Attempting to change directory");
     try {
       sftpChannel.cd(path);
     } catch (SftpException e){
