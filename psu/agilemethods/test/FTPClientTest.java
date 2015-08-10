@@ -55,16 +55,6 @@ public class FTPClientTest {
         }
     }
 
-    @Before
-    public void setUpDir() {
-        // create directory on the server to navigate to
-        try {
-            c.mkdir("NAVABLE_DIR");
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
-    }
-
     @BeforeClass
     static public void initChannelandHostLs() {
         JSch jsch = new JSch();
@@ -203,37 +193,57 @@ public class FTPClientTest {
         assertThat(outContent.toString(), containsString("Directory changed"));
     }
 
+    // these tests were lumped together because dir creation fails in @before
+    // and this avoids creating and deleting the dir multiple times
     @Test
-    public void testParseCmdCDPassesWithoutFullPath() {
+    public void testParseCmdCDPassesWithRelativeAndFullPaths() {
         try {
             c.cd("");
         } catch (SftpException e) {
             e.printStackTrace();
         }
+        // create directory on the server to navigate to
+        try {
+            c.mkdir("NAVABLE_DIR");
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
+
         String cmdString = "cd " + "NAVABLE_DIR";
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("Directory changed"));
-    }
 
-    @Test
-    public void testParseCmdCDPassesWithFullPath() {
-        String dirPath = "";
         try {
             c.cd("");
         } catch (SftpException e) {
             e.printStackTrace();
         }
+
+        // get full present path
+        String dirPath = "";
         try {
             dirPath = c.pwd();
         } catch (SftpException e) {
             e.printStackTrace();
         }
+
         // trim trailing / if there
         if (dirPath.length() > 0 && dirPath.charAt(dirPath.length() - 1)=='/') {
             dirPath = dirPath.substring(0, dirPath.length()-1);
         }
-        String cmdString = "cd " + dirPath + "/NAVABLE_DIR";
+        cmdString = "cd " + dirPath + "/NAVABLE_DIR";
         client.parseCmd(cmdString, c);
         assertThat(outContent.toString(), containsString("Directory changed"));
+
+        try {
+            c.cd("");
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
+        try {
+            c.rmdir("NAVABLE_DIR");
+        } catch (SftpException e) {
+            e.printStackTrace();
+        }
     }
 }
