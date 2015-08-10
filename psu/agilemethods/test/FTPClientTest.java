@@ -103,16 +103,6 @@ public class FTPClientTest {
 
     @After
     public void cleanUpStreams() {
-        try {
-            c.cd("");
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
-        try {
-            c.rmdir("NAVABLE_DIR");
-        } catch (SftpException e) {
-            e.printStackTrace();
-        }
         System.setOut(null);
         System.setErr(null);
     }
