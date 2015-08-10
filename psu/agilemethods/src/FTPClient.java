@@ -104,7 +104,7 @@ public class FTPClient{
             try {
               cd(c, path);
             } catch (SftpException e) {
-              System.out.println(e.getMessage());
+              System.out.println("No such directory");
             }
           } catch (NoSuchElementException e) {
             usage("Desired path must be specified");
@@ -125,25 +125,32 @@ public class FTPClient{
           break;
         case "put":
           try {
-            String source = (String) itr.next();
-            String dest = (String) itr.next();
-            try {
-              upload(c, source, dest);
-            } catch (SftpException e) {
-              System.out.println(e.getMessage());
-            }
+            String source;
+            String dest;
+            do {
+              source = (String) itr.next();
+              dest = (String) itr.next();
+              try {
+                upload(c, source, dest);
+              } catch (SftpException e) {
+                System.out.println("Source file " + source + " not found");
+              }
+            } while (itr.hasNext());
           } catch (NoSuchElementException e) {
             usage("Source and destination must be specified");
           }
           break;
         case "rm":
           try {
-            String file = (String) itr.next();
-            try {
-              rmRemote(c, file);
-            } catch (SftpException e) {
-              System.out.println(e.getMessage());
-            }
+            String file;
+            do {
+              file = (String) itr.next();
+              try {
+                rmRemote(c, file);
+              } catch (SftpException e) {
+                System.out.println(e.getMessage());
+              }
+            } while (itr.hasNext());
           } catch (NoSuchElementException e) {
             usage("Source must be specified");
           }
@@ -190,6 +197,26 @@ public class FTPClient{
               usage("Permissions and file path must be specified.");
             }
           break;
+        case "pwd":
+          try {
+            pwd(c);
+          } catch (SftpException e) {
+            System.out.println(e.getMessage());
+          }
+          break;
+        case "lpwd":
+          lpwd(c);
+          break;
+        case "lcd":
+          try {
+            String path = (String) itr.next();
+            lcd(c, path);
+          } catch (NoSuchElementException e) {
+            System.out.println("Path must be specified.");
+          } catch (SftpException e) {
+            System.out.println(e.getMessage());
+          }
+          break;
         case "exit":
           break;
         default:
@@ -219,10 +246,15 @@ public class FTPClient{
     err.println("** " + message);
     err.println();
     err.println("usage:");
+    err.println("pwd                            : shows current remote directory");
     err.println("cd [path]                      : change remote directory");
+    err.println("lpwd                           : shows current local directory");
+    err.println("lcd [path]                     : change local directory");
     err.println("get [source] [destination]     : gets file from server");
-    err.println("put [source] [destination]     : puts file on server");
-    err.println("rm  [source]                   : removes file from server");
+    err.println("put [source] [destination]     : puts file on server (wild cards are permitted)");
+    err.println("put [[source] [destination]]*  : puts multiple files on server");
+    err.println("rm [file]                      : removes file from server (wild cards are permtited)");
+    err.println("rm {file]*                     : removes multiple files from server");
     err.println("mkdir [path]                   : creates new directory on server");
     err.println("chmod [permissions] [path]     : changes file permission on the server");
     err.println("exit                           : exits from ftp console");
@@ -297,14 +329,16 @@ public class FTPClient{
         fileName = paths[paths.length - 1];
       }
 
-      for (ChannelSftp.LsEntry file : files) {
-        if (file.getFilename().equals(fileName)) {
-          exists = true;
-          break;
+      if (!fileName.contains("*")) {
+        for (ChannelSftp.LsEntry file : files) {
+          if (file.getFilename().equals(fileName)) {
+            exists = true;
+            break;
+          }
         }
       }
 
-      if (exists) {
+      if (exists || fileName.contains("*")) {
         System.out.println("Deleting " + path);
         System.out.println("Are you sure? (y/n)");
         String confirm = br.readLine();
@@ -317,7 +351,8 @@ public class FTPClient{
           System.out.println("Deletion cancelled.");
         }
       } else {
-        System.err.println("File does not exist on remote server");
+        System.out.println(fileName + " does not exist on remote server");
+
       }
     } catch (SftpException e) {
       throw e;
@@ -340,7 +375,6 @@ public class FTPClient{
 
     System.out.println("Download successful");
 
-    lsLocal(".");
   }
 
   // used to upload a file to the server
@@ -351,7 +385,6 @@ public class FTPClient{
     try {
       sftpChannel.put(sourceFilePath, destDirectoryPath);
     } catch (SftpException e) {
-      System.err.println(e.getMessage());
       throw e;
     }
     System.out.println("Upload successful");
@@ -366,6 +399,25 @@ public class FTPClient{
     }
   }
 
+  public static void pwd(ChannelSftp c) throws SftpException {
+    try {
+      System.out.println("Current remote directory: " + c.pwd());
+    } catch (SftpException e) {
+      throw e;
+    }
+  }
+
+  public static void lcd(ChannelSftp c, String path) throws SftpException {
+    try {
+      c.lcd(path);
+    } catch (SftpException e) {
+      throw e;
+    }
+  }
+
+  public static void lpwd(ChannelSftp c)  {
+    System.out.println("Current local directory: " + c.lpwd());
+  }
 }
 
 
