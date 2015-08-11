@@ -93,6 +93,11 @@ public class FTPClient{
     System.exit(0);
   }
 
+  /**
+   * Parses command line args
+   * @param cmdIn string entered on command line
+   * @param c channel connection with FTP server
+   */
   public static void parseCmd(String cmdIn, ChannelSftp c) {
     String[] cmd = cmdIn.split("[ ]+");
     ArrayList<String> cmdArgs = new ArrayList<>(Arrays.asList(cmd));
@@ -244,6 +249,10 @@ public class FTPClient{
 
   }
 
+  /**
+   * Convenient formatting for error messages
+   * @param message
+   */
   private static void error(String message) {
     PrintStream err = System.err;
     err.println("** " + message);
@@ -284,6 +293,10 @@ public class FTPClient{
 
   }
 
+  /**
+   * Lists contents of local directory
+   * @param path
+   */
   static void lsLocal(String path) {
     File dir = new File(path);
     File[] fileList = dir.listFiles();
@@ -298,6 +311,10 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Lists contents of remote directory
+   * @param ch
+   */
   static void lsRemote(ChannelSftp ch) {
     try {
       Vector<ChannelSftp.LsEntry> currentDir = ch.ls(ch.pwd());
@@ -309,6 +326,13 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Changes permissions on remote file
+   * @param sftpChannel
+   * @param permissions
+   * @param path
+   * @throws SftpException
+   */
   static void chmod(ChannelSftp sftpChannel, int permissions, String path) throws SftpException {
     try {
       sftpChannel.chmod(permissions, path);
@@ -318,6 +342,12 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Creates a file on remote directory
+   * @param sftpChannel
+   * @param path
+   * @throws SftpException
+   */
   static void mkdir(ChannelSftp sftpChannel, String path) throws SftpException {
     try {
       sftpChannel.mkdir(path);
@@ -327,6 +357,12 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Removes a file from remote directory
+   * @param sftpChannel
+   * @param path
+   * @throws SftpException
+   */
   static void rmRemote(ChannelSftp sftpChannel, String path) throws SftpException {
     Vector<ChannelSftp.LsEntry> files;
     BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
@@ -373,14 +409,18 @@ public class FTPClient{
         System.out.println(fileName + " does not exist on remote server");
 
       }
-    } catch (SftpException e) {
-      throw e;
-    } catch (IOException e) {
+    } catch (SftpException | IOException e) {
       System.err.println(e.getMessage());
     }
   }
-  // "public" for accessibility from "FTPClientTest.java"
-  // (absent a more modular structure for the project)
+
+  /**
+   * gets a file from the FTP server
+   * @param sftpChannel
+   * @param sourceFilePath
+   * @param destDirectoryPath
+   * @throws SftpException
+   */
   public static void get(ChannelSftp sftpChannel, String sourceFilePath,
                          String destDirectoryPath) throws SftpException {
     System.out.println("Attempting to download \"" + sourceFilePath + "\" from server");
@@ -396,7 +436,13 @@ public class FTPClient{
 
   }
 
-  // used to upload a file to the server
+  /**
+   * Uploads file to remote ftp server
+   * @param sftpChannel
+   * @param sourceFilePath
+   * @param destDirectoryPath
+   * @throws SftpException
+   */
   public static void upload(ChannelSftp sftpChannel, String sourceFilePath,
                             String destDirectoryPath) throws SftpException {
 
@@ -410,6 +456,12 @@ public class FTPClient{
     lsRemote(sftpChannel);
   }
 
+  /**
+   * Changes working directory on remote server
+   * @param c
+   * @param path
+   * @throws SftpException
+   */
   public static void cd(ChannelSftp c, String path) throws SftpException {
     try {
       c.cd(path);
@@ -418,6 +470,11 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Displays remote working directory
+   * @param c
+   * @throws SftpException
+   */
   public static void pwd(ChannelSftp c) throws SftpException {
     try {
       System.out.println("Current remote directory: " + c.pwd());
@@ -426,6 +483,12 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Changes local working directory
+   * @param c
+   * @param path
+   * @throws SftpException
+   */
   public static void lcd(ChannelSftp c, String path) throws SftpException {
     try {
       c.lcd(path);
@@ -434,6 +497,10 @@ public class FTPClient{
     }
   }
 
+  /**
+   * Displays local working directory
+   * @param c
+   */
   public static void lpwd(ChannelSftp c)  {
     System.out.println("Current local directory: " + c.lpwd());
   }
