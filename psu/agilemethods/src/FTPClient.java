@@ -58,6 +58,7 @@ public class FTPClient{
     if (session != null) {
       session.setPassword(password);
       try {
+        session.setTimeout(500);
         session.connect();
         Channel channel = session.openChannel("sftp");
         channel.connect();
