@@ -194,7 +194,7 @@ public class FTPClient{
               if (pString.contains("8") || pString.contains("9")) {
                 System.out.println("Second argument must be in Octal form 000 - 777 representing the desired permission changes. Cannot use 8 or 9");
               } else {
-                int permissions = Integer.parseInt((String) pString, 8);
+                int permissions = Integer.parseInt(pString, 8);
                 if (permissions >= 000 && permissions <= 511) {
                   String path = (String) itr.next();
                   try {
@@ -287,6 +287,7 @@ public class FTPClient{
   static void lsLocal(String path) {
     File dir = new File(path);
     File[] fileList = dir.listFiles();
+    System.out.println("Displaying contents of " + path);
     for (File f : fileList) {
       if (f.isDirectory()) {
         System.out.println("Directory:\t" + f.getName());
