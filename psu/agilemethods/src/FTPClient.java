@@ -237,6 +237,11 @@ public class FTPClient{
             System.out.println(e.getMessage());
           }
           break;
+        case "mv":
+          String oldFile = (String) itr.next();
+          String newFile = (String) itr.next();
+          rename(c, oldFile, newFile);
+          break;
         case "exit":
           break;
         default:
@@ -278,6 +283,7 @@ public class FTPClient{
     err.println("cd [path]                      : change remote directory");
     err.println("lcd [path]                     : change local directory");
     err.println("mkdir [path]                   : creates new directory on server");
+    err.println("mv [oldFilePath] [newFilePath] : renames file on server");
     err.println("get [source] [destination]     : gets file from server");
     err.println("put [source] [destination]     : puts file on server (wild cards are permitted)");
     err.println("put [[source] [destination]]*  : puts multiple files on server");
@@ -354,6 +360,21 @@ public class FTPClient{
       System.out.println("Directory " + path + " created.");
     } catch (SftpException e) {
       throw e;
+    }
+  }
+
+  /**
+   * renames a file on the remote server
+   * @param sftpChannel
+   * @param oldFileName
+   * @param newFileName
+   */
+  static void rename(ChannelSftp sftpChannel, String oldFileName, String newFileName) {
+    try {
+      sftpChannel.rename(oldFileName, newFileName);
+      System.out.println("file renamed");
+    } catch (SftpException e) {
+      error("Unable to rename file: " + e.getMessage());
     }
   }
 
