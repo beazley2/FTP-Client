@@ -3,15 +3,11 @@ package psu.agilemethods.src;
 import com.jcraft.jsch.*;
 
 import javax.swing.*;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
-
+import psu.agilemethods.src.TextUI;
 import static psu.agilemethods.src.TextUI.*;
 
-import java.io.PrintStream;
 import java.util.*;
 
 /**
@@ -32,7 +28,18 @@ public class FTPClient{
     TextUI.start();
     try {
       userName = TextUI.getUsername();
-      password = TextUI.getPassword();
+
+      // In bash etc. hide password input w/ readPassword method
+      // (System.console() returns null when running in IDE)
+      Console console = System.console();
+      if (console == null) {
+        password = TextUI.getPassword();
+      }
+      else {
+        char passwordArray[] = console.readPassword("Password: ");
+        password = new String(passwordArray);
+      }
+
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -111,17 +118,27 @@ public class FTPClient{
           }
           break;
         case "get":
-          try {
-            String srcPath = (String) itr.next();
-            String destPath = (String) itr.next();
+          String srcPath;
+          String destPath;
+          do {
             try {
-              get(c, srcPath, destPath);
-            } catch (SftpException e) {
-              System.out.println(e.getMessage());
+              srcPath = (String) itr.next();
+              if (itr.hasNext()) {
+                destPath = (String) itr.next();
+                try {
+                  get(c, srcPath, destPath);
+                } catch (SftpException e) {
+                  System.out.println(e.getMessage());
+                }
+              }
+              else {
+                System.out.println("Source path (" + srcPath +
+                        ") given without matching destination - no download.");
+              }
+            } catch (NoSuchElementException e) {
+              usage("Source and destination path must be specified (in pairs to 'get' multiple)");
             }
-          } catch (NoSuchElementException e) {
-            usage("Source and destination path must be specified");
-          }
+          } while (itr.hasNext());
           break;
         case "put":
           try {
