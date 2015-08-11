@@ -2,12 +2,7 @@ package psu.agilemethods.src;
 
 import com.jcraft.jsch.*;
 
-import javax.swing.*;
 import java.io.*;
-import java.util.ArrayList;
-import psu.agilemethods.src.TextUI;
-import static psu.agilemethods.src.TextUI.*;
-
 import java.util.*;
 
 /**
@@ -105,6 +100,9 @@ public class FTPClient{
     if (itr.hasNext()) {
       String arg = (String) itr.next();
       switch (arg) {
+        case "help":case "readme":
+          usage("README file for FTP Client");
+          break;
         case "cd":
           try {
             String path = (String) itr.next();

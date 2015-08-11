@@ -172,7 +172,7 @@ public class FTPClientTest {
     }
 
 
-    @Ignore
+
     @Test
     public void testParseCmdDeletePassesWithParams() {
         String cmdString = "rm " + XFER_FILE;
